@@ -1,5 +1,6 @@
 from math import floor, ceil, sqrt
 import numpy as np 
+from scipy.special import binom
 
 def sample_stats(sample):
     sample_size = len(sample)
@@ -115,3 +116,42 @@ def two_sample_binomial_CI(x, n, y, m, z):
     lower = (x/n+y/m) - z*sqrt(pe*(1-pe)*(1/n+1/m))
     upper = (x/n+y/m) + z*sqrt(pe*(1-pe)*(1/n+1/m))
     print("pooled prob is: pe = %f; CI is: z = (%f, %f)" % (pe, lower, upper))
+
+
+# ===========================
+# Multinomial Distribution
+# ===========================
+
+# computes multinomial coefficient, args: list [n1,...,nk]
+def multinom(args):
+    if len(args) == 1:
+        return 1
+    return binom(sum(args), args[-1]) * multinom(args[:-1])
+
+# X = multinomial distribution with params *args = p1,...,pn
+class multinom_dist():
+    def __init__(self, *args):
+        # self.n = n
+        self.p = list(args)
+
+    # computes probability of X1=k1,...,Xn=kn, *args = k1,...,kn
+    def prob(self, *args):
+        if len(args) != len(self.p):
+            print("unmatched parameters")
+            return
+        p = 1
+        for i in range(len(args)):
+            p *= self.p[i]**args[i]
+        return multinom(args) * p
+
+
+# ===========================
+# GOF test with known params
+# ===========================
+
+# d = sum(ki^2/npi) - n
+def GOF_known_test_stat(count, np):
+    if len(count) != len(np):
+        print("unmatched length")
+        return
+    return sum([count[i]**2/np[i] for i in range(len(count))]) - sum(count)
