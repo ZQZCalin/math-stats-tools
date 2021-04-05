@@ -1,6 +1,7 @@
 from math import floor, ceil, sqrt
 import numpy as np 
 from scipy.special import binom
+import matplotlib.pyplot as plt
 
 def sample_stats(sample):
     sample_size = len(sample)
@@ -199,6 +200,11 @@ def GOF_independence(contingency_matrix):
     format_row_bot = "{:<12}" + "{:<12n}" * (n_col + 1)
     print(format_row_bot.format("Col Total", *matrix[-1,:]))
 
+    # test statistic d2 = sum_isum_j (k_ij-e_ij)^2/ne_ij
+    sq_diff = (contingency_matrix-est_matrix)**2 / est_matrix
+    d2 = np.sum(sq_diff)
+    print("\nThe test statistic is d2 = {:.3f}".format(d2))
+
 
 # ===========================
 # Linear Regression
@@ -225,11 +231,24 @@ def linear_regression(X, Y, gx=lambda x:x, fy=lambda x:x, verbose=True):
     b = (n*sum(gXfY) - sum(gX)*sum(fY)) / (n*sum(gXgX) - sum(gX)**2)
     a = (sum(fY) - b*sum(gX)) / n
 
+    # formatting
     if verbose:
-        print("g(x):", np.round(gX, 4), "\nf(y):", np.round(fY, 4), \
-            "\ng(x)f(y)", np.round(gXfY, 4), "\ng(x)^2:", np.round(gXgX, 4))
-        print("="*60)
-        print("The slope is b = {:.4f}, the y-intercept is a = {:.4f}".format(b, a))
+        # regression table
+        top_row = "{:<12}" * 4
+        print(top_row.format("f(x)", "g(y)", "f(x)g(y)", "f(x)^2"))
+        print("=" * (12*4))
+        format_row = "{:<12.2f}" * 4
+        for x, y, xy, x2 in zip(gX, fY, gXfY, gXgX):
+            print(format_row.format(x, y, xy, x2))
+
+        # results
+        print(format_row.format(sum(gX), sum(fY), sum(gXfY), sum(gXgX)))
+        print("\nThe slope is b = {:.4f}, the y-intercept is a = {:.4f}".format(b, a))
         print("The least square line is y = {:.4f} + {:.4f}*x".format(a, b))
-        print("="*60)
-    return a, b
+
+        # plot graph
+        plt.scatter(gX, fY)
+        plt.plot(gX, a+b*gX)
+        plt.show()
+    else:
+        return a, b
