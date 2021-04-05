@@ -146,12 +146,90 @@ class multinom_dist():
 
 
 # ===========================
-# GOF test with known params
+# GOF tests: known/unknown
 # ===========================
 
-# d = sum(ki^2/npi) - n
-def GOF_known_test_stat(count, np):
+# return: d = sum(ki^2/npi) - n (or p^_i if using MLE estimates)
+def GOF_test_stat(count, np):
     if len(count) != len(np):
         print("unmatched length")
         return
     return sum([count[i]**2/np[i] for i in range(len(count))]) - sum(count)
+
+
+# ===========================
+# GOF test: independence
+# ===========================
+
+def GOF_independence(contingency_matrix):
+    # 2d array/list; axis-0: along row, axis-1: along column
+
+    matrix = np.array(contingency_matrix)
+    n_row, n_col = np.shape(matrix)
+
+    # add row total
+    row_total = np.sum(matrix, axis=1)
+    row_total = np.reshape(row_total, (n_row, 1))
+    matrix = np.append(matrix, row_total, axis=1)
+
+    # add column total
+    col_total = np.sum(matrix, axis=0)
+    col_total = np.reshape(col_total, (1, n_col+1))
+    matrix = np.append(matrix, col_total, axis=0)
+
+    # estimated frequency e_{i,j} = R_i * C_j / n
+    est_matrix = col_total[:,:-1] * row_total / matrix[-1,-1]
+
+    # formatting
+    trait_A = [chr(i+65) for i in range(n_row)] + ["Col Total"]
+    trait_B = [chr(i+65) for i in range(n_col)] + ["Row Total"]
+
+    format_row_top = "{:<12}" * (n_col + 2)
+    # first row
+    print(format_row_top.format("", *trait_B))
+    print("="*12*(n_col+2))
+    # other rows
+    format_row_1 = "{:<12}" + "{:<12n}" * (n_col+1) 
+    format_row_2 = "{:<12}" + "{:<12.3f}"  * (n_col)
+    for trait, row, est_row in zip(trait_A[:-1], matrix[:-1,:], est_matrix):
+        print(format_row_1.format(trait, *row))
+        print(format_row_2.format("", *est_row))
+        print("_"*12*(n_col+2))
+    # last row
+    format_row_bot = "{:<12}" + "{:<12n}" * (n_col + 1)
+    print(format_row_bot.format("Col Total", *matrix[-1,:]))
+
+
+# ===========================
+# Linear Regression
+# ===========================
+
+
+def linear_regression(X, Y, gx=lambda x:x, fy=lambda x:x, verbose=True):
+    # X, Y: 1d numpy arrays or lists
+    # gx, fy: functions g(x), f(y); default = identity function
+
+    if len(X) != len(Y):
+        print("X, Y unmatched size")
+        return
+
+    X = np.array(X)
+    Y = np.array(Y)
+    n = len(X)
+
+    gX = gx(X)
+    fY = fy(Y)
+    gXfY = gX * fY
+    gXgX = gX**2
+
+    b = (n*sum(gXfY) - sum(gX)*sum(fY)) / (n*sum(gXgX) - sum(gX)**2)
+    a = (sum(fY) - b*sum(gX)) / n
+
+    if verbose:
+        print("g(x):", np.round(gX, 4), "\nf(y):", np.round(fY, 4), \
+            "\ng(x)f(y)", np.round(gXfY, 4), "\ng(x)^2:", np.round(gXgX, 4))
+        print("="*60)
+        print("The slope is b = {:.4f}, the y-intercept is a = {:.4f}".format(b, a))
+        print("The least square line is y = {:.4f} + {:.4f}*x".format(a, b))
+        print("="*60)
+    return a, b
